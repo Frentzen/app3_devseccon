@@ -1,8 +1,8 @@
 name: build
 on: [push]
 jobs:
-  build:
-    name: Build
+  scan_iac:
+    name: Scan IaC
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout code
@@ -21,9 +21,30 @@ jobs:
           hide-progress: false
           exit-code: '1'
           ignore-unfixed: true
-          severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
 
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
 
+  scan_vuln:
+    name: Vulnerability Scan
+    needs: scan_iac
+    runs-on: ubuntu-20.04
+    steps:
+      
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
       - name: Build an image from Dockerfile
         run: |
           docker build -t docker.io/dockerman1000/app3devseccon:${{ github.sha }} .
@@ -46,7 +67,7 @@ jobs:
 
   upload:
     name: Upload to Docker hub
-    needs: build
+    needs: [scan_iac, scan_vuln]
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout code
