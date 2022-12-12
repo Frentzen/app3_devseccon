@@ -46,6 +46,7 @@ jobs:
 
   upload:
     name: Upload to Docker hub
+    needs: build
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout code
